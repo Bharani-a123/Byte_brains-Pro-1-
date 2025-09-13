@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Firebase Auth + Backend Test</title>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.2/firebase-auth-compat.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+</head>
+<body>
+  <h2>Firebase Auth + Backend Test</h2>
+
+  <div>
+    <h3>Register</h3>
+    <input id="regEmail" placeholder="Email" type="email" />
+    <input id="regPassword" placeholder="Password" type="password" />
+    <button onclick="register()">Register</button>
+  </div>
+
+  <div>
+    <h3>Login</h3>
+    <input id="loginEmail" placeholder="Email" type="email" />
+    <input id="loginPassword" placeholder="Password" type="password" />
+    <button onclick="login()">Login</button>
+  </div>
+
+  <div>
+    <h3>Password Reset</h3>
+    <input id="resetEmail" placeholder="Email" type="email" />
+    <button onclick="resetPassword()">Send Reset Email</button>
+  </div>
+
+  <div>
+    <h3>Profile (Authenticated)</h3>
+    <div id="profileArea" style="display:none;">
+      <input id="name" placeholder="Name" />
+      <input id="additionalEmail" placeholder="Additional Email" type="email" />
+      <input id="mobile" placeholder="Mobile Number" />
+      
+      <div>
+        <label>Profile Picture:</label><br />
+        <input type="file" id="profilePicFile" accept="image/*" />
+        <button onclick="uploadProfilePicture()">Upload Picture</button><br />
+        <img id="profilePicPreview" src="" alt="Profile Picture" style="max-width: 150px; display:none; margin-top:10px;" />
+      </div>
+
+      <input id="craftCategory" placeholder="Craft Category" />
+      <input id="languagePrefs" placeholder="Language Preferences (comma separated)" />
+      <input id="location" placeholder="Location" />
+      
+      <button onclick="loadProfile()">Load Profile</button>
+      <button onclick="saveProfile()">Save Profile</button>
+      <button onclick="logout()">Logout</button>
+      <br /><br />
+      <button onclick="deleteAccount()" style="color: red;">Delete Account</button>
+    </div>
+  </div>
+
+  <script>
+    // Firebase config - replace with your project's info
+    const firebaseConfig = {
+      apiKey: "AIzaSyDFojwHkjN6cljTPEb0gnBuaHgwnVe-o_g",
+      authDomain: "craftechoai-111.firebaseapp.com",
+      projectId: "craftechoai-111",
+      storageBucket: "craftechoai-111.firebasestorage.app",
+      messagingSenderId: "940656745290",
+      appId: "1:940656745290:web:07a7de20d235241395bfb3",
+      measurementId: "G-SX83JV6KYL"
+    };
+
+    firebase.initializeApp(firebaseConfig);
+    const auth = firebase.auth();
+    const BACKEND_URL = "http://127.0.0.1:8000";
+
+    auth.onAuthStateChanged(user => {
+      const profileArea = document.getElementById('profileArea');
+      if (user && user.emailVerified) {
+        profileArea.style.display = 'block';
+      } else {
+        profileArea.style.display = 'none';
+      }
+    });
+
+    async function register() {
+      const email = document.getElementById('regEmail').value;
+      const password = document.getElementById('regPassword').value;
+      try {
+        const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+        await userCredential.user.sendEmailVerification();
+        alert('Registration successful! Verification email sent.');
+      } catch (error) {
+        alert('Registration error: ' + error.message);
+      }
+    }
+
+    async function login() {
+      const email = document.getElementById('loginEmail').value;
+      const password = document.getElementById('loginPassword').value;
+      try {
+        await auth.signInWithEmailAndPassword(email, password);
+        const user = auth.currentUser;
+        if (!user.emailVerified) {
+          alert('Please verify your email before logging in.');
+          await auth.signOut();
+        }
+      } catch (error) {
+        alert('Login error: ' + error.message);
+      }
+    }
+
+    async function logout() {
+      await auth.signOut();
+      alert('Logged out');
+    }
+
+    async function resetPassword() {
+      const email = document.getElementById('resetEmail').value;
+      try {
+        await auth.sendPasswordResetEmail(email);
+        alert('Password reset email sent.');
+      } catch (error) {
+        alert('Reset error: ' + error.message);
+      }
+    }
+
+    async function getIdToken() {
+      const user = auth.currentUser;
+      if (!user) throw new Error('Not authenticated');
+      return await user.getIdToken();
+    }
+
+    async function loadProfile() {
+      try {
+        const idToken = await getIdToken();
+        const resp = await axios.get(BACKEND_URL + '/auth/profile', {
+          headers: { Authorization: 'Bearer ' + idToken }
+        });
+        const profile = resp.data;
+
+        document.getElementById('name').value = profile.name || '';
+        document.getElementById('additionalEmail').value = profile.additional_email || '';
+        document.getElementById('mobile').value = profile.mobile || '';
+        if (profile.profile_picture_url) {
+          document.getElementById('profilePicPreview').src = profile.profile_picture_url;
+          document.getElementById('profilePicPreview').style.display = 'block';
+        } else {
+          document.getElementById('profilePicPreview').style.display = 'none';
+        }
+        document.getElementById('craftCategory').value = profile.craft_category || '';
+
+        // handle language_prefs correctly (string or list)
+        if (Array.isArray(profile.language_prefs)) {
+          document.getElementById('languagePrefs').value = profile.language_prefs.join(', ');
+        } else {
+          document.getElementById('languagePrefs').value = profile.language_prefs || '';
+        }
+
+        document.getElementById('location').value = profile.location || '';
+      } catch (error) {
+        alert('Load profile error: ' + error.message);
+      }
+    }
+
+    async function saveProfile() {
+      try {
+        const idToken = await getIdToken();
+
+        const formData = new FormData();
+        formData.append("name", document.getElementById('name').value.trim());
+        formData.append("additional_email", document.getElementById('additionalEmail').value.trim());
+        formData.append("mobile", document.getElementById('mobile').value.trim());
+        formData.append("craft_category", document.getElementById('craftCategory').value.trim());
+        formData.append("language_prefs", document.getElementById('languagePrefs').value.trim());
+        formData.append("location", document.getElementById('location').value.trim());
+
+        const fileInput = document.getElementById('profilePicFile');
+        if (fileInput.files.length > 0) {
+          formData.append("file", fileInput.files[0]);
+        }
+
+        await axios.post(BACKEND_URL + '/auth/profile', formData, {
+          headers: {
+            'Authorization': 'Bearer ' + idToken,
+            'Content-Type': 'multipart/form-data'
+          }
+        });
+
+        alert('Profile saved');
+      } catch (error) {
+        alert('Save profile error: ' + error.message);
+      }
+    }
+
+    async function uploadProfilePicture() {
+      const fileInput = document.getElementById('profilePicFile');
+      if (fileInput.files.length === 0) {
+        alert('Please select an image file to upload.');
+        return;
+      }
+      const file = fileInput.files[0];
+      const idToken = await getIdToken();
+
+      const formData = new FormData();
+      formData.append('file', file);
+
+      try {
+        const response = await axios.post(BACKEND_URL + '/auth/profile-picture', formData, {
+          headers: {
+            'Authorization': 'Bearer ' + idToken,
+            'Content-Type': 'multipart/form-data'
+          }
+        });
+        const url = response.data.profile_picture_url;
+        document.getElementById('profilePicPreview').src = url;
+        document.getElementById('profilePicPreview').style.display = 'block';
+        alert('Profile picture uploaded successfully');
+      } catch (error) {
+        alert('Error uploading picture: ' + error.message);
+      }
+    }
+
+    async function deleteAccount() {
+      if (!confirm("Are you sure you want to delete your account? This action is irreversible.")) {
+        return;
+      }
+      try {
+        const idToken = await getIdToken();
+        await axios.delete(BACKEND_URL + '/auth/account', {
+          headers: {
+            'Authorization': 'Bearer ' + idToken
+          }
+        });
+        alert('Account deleted successfully.');
+        await logout();
+      } catch (error) {
+        alert('Error deleting account: ' + error.message);
+      }
+    }
+  </script>
+</body>
+</html>
