@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Image Generator</title>
+    <style>
+        body { font-family: sans-serif; text-align: center; margin-top: 50px; }
+        input[type="text"] { width: 400px; padding: 10px; }
+        button { padding: 10px 20px; cursor: pointer; }
+        #image-container { margin-top: 30px; }
+        #generated-image { max-width: 100%; height: auto; border: 1px solid #ccc; }
+    </style>
+</head>
+<body>
+    <h1>Generate an Image with Vertex AI</h1>
+    <form id="image-form">
+        <input type="text" id="prompt-input" placeholder="Enter a prompt here..." required>
+        <button type="submit">Generate</button>
+    </form>
+    <div id="image-container">
+        <p>Your generated image will appear here.</p>
+        <img id="generated-image" style="display: none;">
+    </div>
+
+    <script>
+        const form = document.getElementById('image-form');
+        const promptInput = document.getElementById('prompt-input');
+        const imageContainer = document.getElementById('image-container');
+        const generatedImage = document.getElementById('generated-image');
+        const submitButton = form.querySelector('button');
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const prompt = promptInput.value;
+
+            // Provide user feedback and disable form
+            imageContainer.querySelector('p').textContent = 'Generating... please wait.';
+            generatedImage.style.display = 'none';
+            submitButton.disabled = true;
+            promptInput.disabled = true;
+
+            try {
+                const response = await fetch('/generate-image', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ prompt: prompt }),
+                });
+
+                if (!response.ok) {
+                    const errorData = await response.json();
+                    throw new Error(errorData.error || `HTTP error! status: ${response.status}`);
+                }
+
+                const data = await response.json();
+                
+                // The backend now sends PNG data
+                generatedImage.src = `data:image/png;base64,${data.image_data}`;
+                generatedImage.style.display = 'block';
+                imageContainer.querySelector('p').textContent = '';
+
+            } catch (error) {
+                console.error('Error:', error);
+                imageContainer.querySelector('p').textContent = `Error: ${error.message}`;
+            } finally {
+                // Re-enable form
+                submitButton.disabled = false;
+                promptInput.disabled = false;
+            }
+        });
+    </script>
+</body>
+</html>

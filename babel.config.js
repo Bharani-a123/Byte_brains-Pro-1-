@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 module.exports = {
   presets: ['module:metro-react-native-babel-preset'],
   plugins: [
@@ -6,3 +7,13 @@ module.exports = {
     ['@babel/plugin-transform-private-property-in-object', {loose: true}],
   ],
 };
+=======
+module.exports = {
+  presets: ['module:metro-react-native-babel-preset'],
+  plugins: [
+    ['@babel/plugin-transform-class-properties', {loose: true}],
+    ['@babel/plugin-transform-private-methods', {loose: true}],
+    ['@babel/plugin-transform-private-property-in-object', {loose: true}],
+  ],
+};
+>>>>>>> df353853765abd1a91ad39efa5daa24b2b5e5f53

@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 {
   "compilerOptions": {
     "jsx": "react"
@@ -15,3 +16,22 @@
 
   "include": ["src", "types/declarations.d.ts"]
 }
+=======
+{
+  "compilerOptions": {
+    "jsx": "react"
+  },
+  "compilerOptions": {
+    "jsx": "react"
+  },
+  "compilerOptions": {
+    "jsx": "react"
+  },
+  "compilerOptions": {
+    "jsx": "react"
+  },
+  "extends": "@react-native/typescript-config/tsconfig.json",
+
+  "include": ["src", "types/declarations.d.ts"]
+}
+>>>>>>> df353853765abd1a91ad39efa5daa24b2b5e5f53
